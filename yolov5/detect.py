@@ -5,7 +5,10 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+#import paho.mqtt.client as mqtt
+
 from numpy import random
+
 
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
@@ -89,7 +92,7 @@ def detect(save_img=False):
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
-            s += '%gx%g ' % img.shape[2:]  # print string
+            # s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             if len(det):
                 # Rescale boxes from img_size to im0 size
@@ -99,8 +102,10 @@ def detect(save_img=False):
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
-
+                    s += "\n"
                 # Write results
+
+
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -113,8 +118,16 @@ def detect(save_img=False):
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
             # Print time (inference + NMS)
-            print(f'{s}Done. ({t2 - t1:.3f}s)')
-
+                s += "\n"
+                #mqttBroker = "0.0.0.0"
+                #port = 1883
+                #client = mqtt.Client("Detection")
+                #client.connect(mqttBroker, port)
+                print(f'{s}ALERT' + "\n")
+                #client.publish("/data", f'{s}ALERT' + "\n")
+                #client.disconnect()
+            else:
+                print("No Detections")
             # Stream results
             if view_img:
                 cv2.imshow(str(p), im0)
@@ -141,7 +154,8 @@ def detect(save_img=False):
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         print(f"Results saved to {save_dir}{s}")
 
-    print(f'Done. ({time.time() - t0:.3f}s)')
+    print(f'ALERT. ({time.time() - t0:.3f}s)')
+    print()
 
 
 if __name__ == '__main__':
