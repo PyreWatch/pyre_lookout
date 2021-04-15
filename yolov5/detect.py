@@ -5,8 +5,7 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
-#import paho.mqtt.client as mqtt
-
+import paho.mqtt.client as mqtt
 from numpy import random
 
 
@@ -16,6 +15,37 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
+
+broker = 'localhost'
+port = 1883
+#topic = "dt/fighter+/lwt"
+client_id = f'python-mqtt-{random.randint(0, 1000)}'
+
+def make_mqtt_connection():
+
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("MQTT Successfull connection")
+        else:
+            print("Connection failed return code: %d\n", rc)
+
+    client = mqtt.Client(client_id)
+    client.on_connect = on_connect
+    client.connect(broker, port)
+    return client
+
+def send_alert(client, alertText):
+    topic = "dt/fighter/alert/lwt"
+    again = True
+    while again:
+        time.sleep(5)
+        success = client.publish(topic, alertText)
+        if success[0] == 0:
+            again = False
+        else:
+            print("Message Sent")
+            again = False
+    return
 
 
 def detect(save_img=False):
@@ -118,14 +148,10 @@ def detect(save_img=False):
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
             # Print time (inference + NMS)
+                t = s
                 s += "\n"
-                #mqttBroker = "0.0.0.0"
-                #port = 1883
-                #client = mqtt.Client("Detection")
-                #client.connect(mqttBroker, port)
                 print(f'{s}ALERT' + "\n")
-                #client.publish("/data", f'{s}ALERT' + "\n")
-                #client.disconnect()
+                send_alert(client, f'{t}Alert')
             else:
                 print("No Detections")
             # Stream results
@@ -179,6 +205,9 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     print(opt)
     check_requirements()
+    client = make_mqtt_connection()
+    client.loop_start()
+
 
     with torch.no_grad():
         if opt.update:  # update all models (to fix SourceChangeWarning)
