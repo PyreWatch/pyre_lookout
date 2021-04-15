@@ -7,6 +7,9 @@ import torch
 import torch.backends.cudnn as cudnn
 import paho.mqtt.client as mqtt
 from numpy import random
+from PIL import Image
+import io
+import paho.mqtt.publish as publish
 
 
 from models.experimental import attempt_load
@@ -34,18 +37,20 @@ def make_mqtt_connection():
     client.connect(broker, port)
     return client
 
+def send_picture_alert(path):
+        topic = "dt/fighter/alert/lwt"
+        image = Image.open(path)
+        imgByteArray = io.BytesIO()
+        image.save(imgByteArray, "PNG")
+        time.sleep(5)
+        client.publish(topic, imgByteArray.getvalue())
+        print("Image Sent")
+
 def send_alert(client, alertText):
     topic = "dt/fighter/alert/lwt"
-    again = True
-    while again:
-        time.sleep(5)
-        success = client.publish(topic, alertText)
-        if success[0] == 0:
-            again = False
-        else:
-            print("Message Sent")
-            again = False
-    return
+    time.sleep(5)
+    client.publish(topic, alertText)
+    print("Message Sent")
 
 
 def detect(save_img=False):
@@ -152,6 +157,7 @@ def detect(save_img=False):
                 s += "\n"
                 print(f'{s}ALERT' + "\n")
                 send_alert(client, f'{t}Alert')
+
             else:
                 print("No Detections")
             # Stream results
@@ -163,6 +169,7 @@ def detect(save_img=False):
             if save_img:
                 if dataset.mode == 'image':
                     cv2.imwrite(save_path, im0)
+                    send_picture_alert(save_path)
                 else:  # 'video'
                     if vid_path != save_path:  # new video
                         vid_path = save_path
