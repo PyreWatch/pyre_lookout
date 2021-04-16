@@ -37,16 +37,17 @@ def make_mqtt_connection():
     client.connect(broker, port)
     return client
 
-def send_picture_alert(path):
-        topic = "dt/fighter/alert/lwt"
-        image = Image.open(path)
-        imgByteArray = io.BytesIO()
-        image.save(imgByteArray, "PNG")
-        time.sleep(5)
-        client.publish(topic, imgByteArray.getvalue())
-        print("Image Sent")
+def send_picture_alert(path, isAlert):
+    topic = "dt/fighter/alert/lwt"
+    image = Image.open(path)
+    imgByteArray = io.BytesIO()
+    image.save(imgByteArray, "PNG")
+    time.sleep(5)
+    client.publish(topic, imgByteArray.getvalue())
+    print("Image Sent")
 
 def send_alert(client, alertText):
+    time.sleep(5)
     topic = "dt/fighter/alert/lwt"
     time.sleep(5)
     client.publish(topic, alertText)
@@ -118,6 +119,7 @@ def detect(save_img=False):
             pred = apply_classifier(pred, modelc, img, im0s)
 
         # Process detections
+        isAlert = False
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
                 p, s, im0, frame = path[i], '%g: ' % i, im0s[i].copy(), dataset.count
@@ -137,6 +139,7 @@ def detect(save_img=False):
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
+                    t = s
                     s += "\n"
                 # Write results
 
@@ -153,10 +156,11 @@ def detect(save_img=False):
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
             # Print time (inference + NMS)
-                t = s
+                isAlert = True
                 s += "\n"
                 print(f'{s}ALERT' + "\n")
-                send_alert(client, f'{t}Alert')
+                text = t[0:-2]
+                send_alert(client, text)
 
             else:
                 print("No Detections")
@@ -169,7 +173,7 @@ def detect(save_img=False):
             if save_img:
                 if dataset.mode == 'image':
                     cv2.imwrite(save_path, im0)
-                    send_picture_alert(save_path)
+                    send_picture_alert(save_path, isAlert)
                 else:  # 'video'
                     if vid_path != save_path:  # new video
                         vid_path = save_path
