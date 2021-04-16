@@ -38,18 +38,20 @@ def make_mqtt_connection():
     return client
 
 def send_picture_alert(path, isAlert):
-    topic = "dt/fighter/alert/lwt"
+    if isAlert:
+        topic = "dt/fighter/" + client_id + "/fire_image"
+        print("Detection Image")
+    else:
+        topic = "dt/fighter/" + client_id + "/nofire_image"
+        print("No detection image")
     image = Image.open(path)
     imgByteArray = io.BytesIO()
     image.save(imgByteArray, "PNG")
-    time.sleep(5)
     client.publish(topic, imgByteArray.getvalue())
     print("Image Sent")
 
 def send_alert(client, alertText):
-    time.sleep(5)
     topic = "dt/fighter/alert/lwt"
-    time.sleep(5)
     client.publish(topic, alertText)
     print("Message Sent")
 
@@ -217,6 +219,7 @@ if __name__ == '__main__':
     print(opt)
     check_requirements()
     client = make_mqtt_connection()
+    time.sleep(5)
     client.loop_start()
 
 
